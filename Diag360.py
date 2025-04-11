@@ -10,7 +10,7 @@ from io import BytesIO
 
 st.set_page_config(layout="centered", page_title="Diag360 - Visualisation")
 
-st.html("")
+st.html("<br>")
 
 st.title("Diag360 - Visualisation des besoins territoriaux")
 
