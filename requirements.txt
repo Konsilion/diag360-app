@@ -3,5 +3,4 @@ pandas
 numpy
 plotly
 matplotlib
-textwrap
 openpyxl
