@@ -97,7 +97,7 @@ with st.expander("Téléchargement du fichier"):
 
     
     # Choix entre lien ou fichier local
-    upload_option = st.radio("Choisir la méthode de téléchargement", ["Lien vers le fichier", "Télécharger depuis l'ordinateur"])
+    upload_option = st.radio("Choisir la méthode de téléchargement", ["Télécharger depuis l'ordinateur", "Lien vers le fichier"])
 
     if upload_option == "Lien vers le fichier":
         # Champ pour l'URL
