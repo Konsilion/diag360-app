@@ -142,18 +142,18 @@ with st.expander("Téléchargement du fichier"):
 if df is not None:
     st.markdown("## Synthèse de l'ensemble des besoins")
     with st.expander("Paramètres graphique"):
+        st.markdown("### Graphique général")
         font_size_global = st.slider("Taille de la police des étiquettes (Global)", min_value=5, max_value=12, value=9, key="font_size_global")
         truncate_labels_global = st.checkbox("Tronquer les étiquettes (Global)", value=True, key="truncate_labels_global")
+        st.markdown("### Graphique focus besoin")
+        font_size_specific = st.slider("Taille de la police des étiquettes (Spécifique)", min_value=5, max_value=12, value=9, key="font_size_specific")
+        truncate_labels_specific = st.checkbox("Tronquer les étiquettes (Spécifique)", value=True, key="truncate_labels_specific")
 
     add_to_radar(df, 'type_besoins', 'besoins', font_size_global, truncate_labels_global)
 
     st.markdown("## Focus sur un besoin")
     besoins_list = df['besoins'].unique()
     selected_besoin = st.selectbox("", besoins_list)
-
-    with st.expander("Paramètres graphique"):
-        font_size_specific = st.slider("Taille de la police des étiquettes (Spécifique)", min_value=5, max_value=12, value=9, key="font_size_specific")
-        truncate_labels_specific = st.checkbox("Tronquer les étiquettes (Spécifique)", value=True, key="truncate_labels_specific")
 
     if selected_besoin:
         df_selected = df[df['besoins'] == selected_besoin]
