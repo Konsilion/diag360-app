@@ -7,7 +7,7 @@ import textwrap
 import requests
 from io import BytesIO
 
-st.markdown("<br><br><br>")
+st.html("<br><br><br>")
 
 st.set_page_config(layout="centered", page_title="Diag360 - Visualisation")
 st.title("Diag360 - Visualisation des besoins territoriaux")
