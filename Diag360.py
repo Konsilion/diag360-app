@@ -181,7 +181,7 @@ if df is not None:
             lien = df_indicateurs.loc[df_indicateurs["designation_indicateur"] == label, "lien"].values
             href = lien[0] if len(lien) > 0 else "#"
             html_content += f"""
-            <a style="color: {ft_color}; text-decoration: none;" href="{href}" target="_blank">
+            <a style="color: {ft_color}; text-decoration: none;" href="https://konsilion.github.io/diag360/" target="_blank">
                 <div class="ksln-cards" style="margin: 0px auto auto 3px;">
                     <p style="
                         text-align: left;
