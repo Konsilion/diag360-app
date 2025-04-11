@@ -7,9 +7,11 @@ import textwrap
 import requests
 from io import BytesIO
 
-st.html("<br><br><br>")
 
 st.set_page_config(layout="centered", page_title="Diag360 - Visualisation")
+
+st.html("<br><br><br>")
+
 st.title("Diag360 - Visualisation des besoins territoriaux")
 
 def truncate_text(text, max_length=400):
