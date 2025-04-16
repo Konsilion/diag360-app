@@ -17,11 +17,17 @@ st.title("Diag360 - Visualisation des besoins territoriaux")
 def truncate_text(text, max_length=400):
     return text if len(text) <= max_length else text[:max_length] + ' [...]'
 
-def format_label(label, truncate=False, max_len=50, line_len=20):
+
+
+
+def format_label(label, truncate=False, max_len=50, line_len=25):
     if truncate and len(label) > max_len:
         label = label[:max_len] + '...'
     wrapped_text = textwrap.fill(label, width=line_len, break_long_words=False)
     return wrapped_text.replace('\n', '\n')
+
+
+
 
 def add_to_radar(df, groupe, s_groupe, font_size, truncate_labels):
     df_grouped = df.groupby([groupe, s_groupe])["valeur_indice"].mean().reset_index()
@@ -71,6 +77,18 @@ def add_to_radar(df, groupe, s_groupe, font_size, truncate_labels):
     ax.tick_params(axis='y', labelcolor='white', labelsize=0, grid_color='#FFF', grid_alpha=0, width=0)
     ax.set_ylim(0, 1.05)
 
+    if(groupe == "type_besoins"):
+        df_affiche = df_grouped.iloc[:, [0, 1, 2]].set_axis(['Type de besoin', 'Besoin', 'Indice'], axis=1)
+        df_affiche = df_affiche.iloc[[0] + [i for i in range(-1, -len(df_affiche), -2)] + [i for i in range(-2, -len(df_affiche), -2)]]
+        df_affiche = df_affiche.set_index("Type de besoin")  # <-- assignation ici
+    else:
+        df_affiche = df_grouped.iloc[:, [1, 2]].set_axis(['Besoin', 'Indice'], axis=1)
+        df_affiche = df_affiche.iloc[[0] + [i for i in range(-1, -len(df_affiche), -2)] + [i for i in range(-2, -len(df_affiche), -2)]]
+        df_affiche = df_affiche.set_index("Besoin")  # <-- assignation ici
+    
+    with st.expander("Détail du graphe"):
+        st.write(df_affiche)
+
     st.pyplot(fig)
 
     return list(zip(df_grouped[s_groupe], colors))
@@ -80,6 +98,9 @@ def add_to_radar(df, groupe, s_groupe, font_size, truncate_labels):
 
 
 df = None
+
+
+
 
 with st.expander("Téléchargement du fichier"):
 
@@ -107,7 +128,7 @@ with st.expander("Téléchargement du fichier"):
         # Champ pour l'URL
         excel_url = st.text_input(
             "Collez le lien de votre fichier Excel :",
-            value="https://github.com/Konsilion/konsilion-drive/raw/refs/heads/main/Diag360/Diag360_Indicateurs%20(1).xlsx"
+            value="https://github.com/Konsilion/diag360-app/raw/refs/heads/main/Version%20publique%20-%20Diag360.xlsx"
         )
         df = None
         if excel_url:
@@ -144,19 +165,24 @@ with st.expander("Téléchargement du fichier"):
 
 # 👉 Affichage seulement si le fichier a bien été chargé
 if df is not None:
-    with st.expander("Paramètres graphique"):
+    with st.expander("Paramètres graphiques"):
         st.markdown("### Graphique général")
         font_size_global = st.slider("Taille de la police des étiquettes", min_value=5, max_value=12, value=9, key="font_size_global")
         truncate_labels_global = st.checkbox("Tronquer les étiquettes", value=True, key="truncate_labels_global")
         st.markdown("### Graphique focus besoin")
         font_size_specific = st.slider("Taille de la police des étiquettes", min_value=5, max_value=12, value=9, key="font_size_specific")
         truncate_labels_specific = st.checkbox("Tronquer les étiquettes", value=True, key="truncate_labels_specific")
-
+    
     st.markdown("## Synthèse de l'ensemble des besoins")
+
+    with st.expander("Tableau général"):
+        st.write(df)
+    
     
     add_to_radar(df, 'type_besoins', 'besoins', font_size_global, truncate_labels_global)
 
-    st.markdown("## Focus sur un besoin")
+    st.html("<br><br><hr>")
+    
     besoins_list = df['besoins'].unique()
     selected_besoin = st.selectbox("", besoins_list)
 
@@ -169,7 +195,7 @@ if df is not None:
 
         ordered_indicators = add_to_radar(df_selected, 'besoins', 'designation_indicateur', font_size_specific, truncate_labels_specific)
 
-        html_content = '<hr style="margin: 50px 0 !important;"><div class="ksln-grid">'
+        html_content = '<br><br><div class="ksln-grid">'
         rotated_ordered_indicators = ordered_indicators[::-1][-1:] + ordered_indicators[::-1][:-1]
         for label, color in rotated_ordered_indicators:
             val = values_dict.get(label, 0)
