@@ -172,12 +172,13 @@ if df is not None:
         st.markdown("### Graphique focus besoin")
         font_size_specific = st.slider("Taille de la police des étiquettes", min_value=5, max_value=12, value=9, key="font_size_specific")
         truncate_labels_specific = st.checkbox("Tronquer les étiquettes", value=True, key="truncate_labels_specific")
-    
-    st.markdown("## Synthèse de l'ensemble des besoins")
 
     with st.expander("Tableau général"):
         st.write(df)
+
     
+    st.markdown("## Synthèse de l'ensemble des besoins")
+  
     
     add_to_radar(df, 'type_besoins', 'besoins', font_size_global, truncate_labels_global)
 
@@ -212,7 +213,7 @@ if df is not None:
             lien = df_indicateurs.loc[df_indicateurs["designation_indicateur"] == label, "lien"].values
             href = lien[0] if len(lien) > 0 else "#"
             html_content += f"""
-            <a style="color: {ft_color}; text-decoration: none;" href="https://konsilion.github.io/diag360/" target="_blank">
+            <a style="color: {ft_color}; text-decoration: none;" href="{href}" target="_blank">
                 <div class="ksln-cards" style="margin: 0px auto auto 3px;">
                     <p style="
                         text-align: left;
