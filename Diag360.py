@@ -8,17 +8,12 @@ import requests
 from io import BytesIO
 
 
-st.set_page_config(layout="centered", page_title="Diag360 - Visualisation")
-
-st.html("<br>")
-
-st.title("Diag360 - Visualisation des besoins territoriaux")
+st.markdown("## Diag360 - Visualisation des besoins territoriaux")
+        
+st.html("<br><img src='https://github.com/Konsilion/diag360/blob/master/mkdocs/media/Bandeau_Diag360.png?raw=true' alt='Bandeau de diag360' style='max-width: 100%'>")
 
 def truncate_text(text, max_length=400):
     return text if len(text) <= max_length else text[:max_length] + ' [...]'
-
-
-
 
 def format_label(label, truncate=False, max_len=50, line_len=25):
     if truncate and len(label) > max_len:
@@ -29,9 +24,20 @@ def format_label(label, truncate=False, max_len=50, line_len=25):
 
 
 
-def add_to_radar(df, groupe, s_groupe, font_size, truncate_labels):
+
+
+
+
+
+
+def add_to_radar(df, groupe, s_groupe, truncate_labels, df_ref=None):
+
+    # Calculer la taille de la police en fonction du nombre d'indicateurs
+    num_indicators = len(df[s_groupe].unique())
+    font_size = 18 + (num_indicators) * (-2/3)  # Linéaire entre 10 et 18 indicateurs
+
     df_grouped = df.groupby([groupe, s_groupe])["valeur_indice"].mean().reset_index()
-    
+
     labels = df_grouped[s_groupe].values
     values = df_grouped["valeur_indice"].values
 
@@ -40,7 +46,7 @@ def add_to_radar(df, groupe, s_groupe, font_size, truncate_labels):
 
     df_grouped["angle"] = angles
     df_grouped = df_grouped.sort_values(by="angle")
-    
+
     labels = df_grouped[s_groupe].values
     values = df_grouped["valeur_indice"].values
     angles = df_grouped["angle"].values
@@ -67,13 +73,26 @@ def add_to_radar(df, groupe, s_groupe, font_size, truncate_labels):
 
     ax.set_axisbelow(False)
 
-    labels = [format_label(label, truncate_labels) for label in labels]
+    formatted_labels = [format_label(label, truncate_labels) for label in labels]
 
     ax.set_xticks(angles)
-    ax.set_xticklabels(labels, fontsize=font_size)
+    ax.set_xticklabels(formatted_labels, fontsize=font_size)
     ax.tick_params(axis='x', labelsize=font_size, labelcolor='#222', grid_color='#555', grid_alpha=0.1, pad=3)
-    ax.bar(angles, values, color=colors, alpha=1, width=2*np.pi/num_vars, zorder=1, linewidth=3, edgecolor='white')
+    
+    if df_ref is not None:
+        # Aligner les indicateurs du fichier de référence avec ceux du fichier principal
+        df_ref_grouped = df_ref.groupby([groupe, s_groupe])["valeur_indice"].mean().reset_index()
+        ref_values = []
+        for label in labels:  # Utiliser les labels d'origine pour la correspondance
+            if label in df_ref_grouped[s_groupe].values:
+                ref_values.append(df_ref_grouped.loc[df_ref_grouped[s_groupe] == label, "valeur_indice"].values[0])
+            else:
+                ref_values.append(0)  # Valeur par défaut si l'indicateur est manquant
+        ax.bar(angles, ref_values, color='none', alpha=0.8, width=2*np.pi/num_vars, zorder=2, linewidth=1, edgecolor='lightcoral', linestyle='dashed')
 
+    
+    # Tracer les barres principales après les barres de référence
+    ax.bar(angles, values, color=colors, alpha=0.9, width=2*np.pi/num_vars, linewidth=3, edgecolor='white')
     ax.tick_params(axis='y', labelcolor='white', labelsize=0, grid_color='#FFF', grid_alpha=0, width=0)
     ax.set_ylim(0, 1.05)
 
@@ -85,11 +104,13 @@ def add_to_radar(df, groupe, s_groupe, font_size, truncate_labels):
         df_affiche = df_grouped.iloc[:, [1, 2]].set_axis(['Besoin', 'Indice'], axis=1)
         df_affiche = df_affiche.iloc[[0] + [i for i in range(-1, -len(df_affiche), -2)] + [i for i in range(-2, -len(df_affiche), -2)]]
         df_affiche = df_affiche.set_index("Besoin")  # <-- assignation ici
-    
-    with st.expander("Détail du graphe"):
-        st.write(df_affiche)
+
+    if df_ref is not None:
+        st.html(f"référence : {df_ref_info.iloc[1, 1]}<br>")
 
     st.pyplot(fig)
+
+    st.write(df_affiche.round(2))
 
     return list(zip(df_grouped[s_groupe], colors))
 
@@ -97,95 +118,103 @@ def add_to_radar(df, groupe, s_groupe, font_size, truncate_labels):
 
 
 
+
+
+
+
+
+
+
 df = None
+df_ref = None
+uploaded_files = []
 
 
 
 
-with st.expander("Téléchargement du fichier"):
 
-    if df is None:
-        st.markdown("""
-        <div>
-            <h2>Vous débutez avec Diag360 ?</h2>
-            <p>
-                1. Télécharger ce fichier et suivez les instructions, nous vous retrouvons ici juste après 🤗 :<br>
-                <a href="https://github.com/Konsilion/diag360/raw/master/mkdocs/media/Diag360_Indicateurs.xlsx">Télécharger le tableur de données</a>
-            </p>
-            <p>
-                2. Une fois le fichier rempli, collez le lien vers votre fichier Excel hébergé en lien "raw" (GitHub, Gitlab) dans le champ prévu, ou alors téléchargez le fichier depuis votre ordinateur directement.
-                <br>--<br>Pour plus d'informations, rendez-vous sur le site suivant :
-                <a target="_blank" href="https://konsilion.github.io/diag360/">Documentation Diag360</a>
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
 
-    
-    # Choix entre lien ou fichier local
-    upload_option = st.radio("Choisir la méthode de téléchargement", ["Télécharger depuis l'ordinateur", "Lien vers le fichier"])
 
-    if upload_option == "Lien vers le fichier":
-        # Champ pour l'URL
-        excel_url = st.text_input(
-            "Collez le lien de votre fichier Excel :",
-            value="https://github.com/Konsilion/diag360-app/raw/refs/heads/main/Version%20publique%20-%20Diag360.xlsx"
-        )
-        df = None
-        if excel_url:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+with st.expander("Paramètres"):
+
+    uploaded_files = st.file_uploader("Choisir un ou plusieurs fichiers Excel", type=["xlsx"], accept_multiple_files=True)
+    if uploaded_files:
+        file_names = []
+        for uploaded_file in uploaded_files:
             try:
-                response = requests.get(excel_url)
-                response.raise_for_status()
-                file_in_memory = BytesIO(response.content)
-
-                df = pd.read_excel(file_in_memory, sheet_name='Export')
-                df_besoins = pd.read_excel(file_in_memory, sheet_name="Besoins_Infos")
-                df_indicateurs = pd.read_excel(file_in_memory, sheet_name="Indicateurs_Infos")
+                df_info = pd.read_excel(uploaded_file, sheet_name="Informations")
+                file_name = df_info.iloc[1, 1]  # Lire la cellule B3 de l'onglet "Informations"
+                file_names.append(file_name)
             except Exception as e:
                 st.error(f"Erreur lors du chargement du fichier : {e}")
 
-    elif upload_option == "Télécharger depuis l'ordinateur":
-        # Champ pour le téléchargement local
-        uploaded_file = st.file_uploader("Choisir un fichier Excel", type=["xlsx"])
-        if uploaded_file is not None:
-            try:
-                df = pd.read_excel(uploaded_file, sheet_name='Export')
-                df_besoins = pd.read_excel(uploaded_file, sheet_name="Besoins_Infos")
-                df_indicateurs = pd.read_excel(uploaded_file, sheet_name="Indicateurs_Infos")
-            except Exception as e:
-                st.error(f"Erreur lors du chargement du fichier : {e}")
+        selected_file_name = st.selectbox("Sélectionnez un fichier principal à charger", file_names)
+        selected_file = next(file for file in uploaded_files if pd.read_excel(file, sheet_name="Informations").iloc[1, 1] == selected_file_name)
 
+        reference_file_name = st.selectbox("Sélectionnez un fichier de référence à charger", [None] + file_names)
+        reference_file = next((file for file in uploaded_files if pd.read_excel(file, sheet_name="Informations").iloc[1, 1] == reference_file_name), None)
 
+        try:
+            df = pd.read_excel(selected_file, sheet_name='Export')
+            df_besoins = pd.read_excel(selected_file, sheet_name="Besoins_Infos")
+            df_indicateurs = pd.read_excel(selected_file, sheet_name="Indicateurs_Infos")
+            df_info = pd.read_excel(selected_file, sheet_name="Informations")
 
+            if reference_file:
+                df_ref = pd.read_excel(reference_file, sheet_name='Export')
+                df_ref_info = pd.read_excel(reference_file, sheet_name='Informations')
+        except Exception as e:
+            st.error(f"Erreur lors du chargement du fichier : {e}")
 
+    if df is not None:
+        st.write(df)
 
+        st.html("<hr>")
 
+        st.markdown("#### Paramètres premier graphique")
+        truncate_labels_global = st.checkbox("Tronquer les étiquettes", value=True, key="truncate_labels_global")
 
-
-
+        st.markdown("#### Paramètres second graphique")
+        truncate_labels_specific = st.checkbox("Tronquer les étiquettes", value=True, key="truncate_labels_specific")
 
 # 👉 Affichage seulement si le fichier a bien été chargé
 if df is not None:
-    with st.expander("Paramètres graphiques"):
-        st.markdown("### Graphique général")
-        font_size_global = st.slider("Taille de la police des étiquettes", min_value=5, max_value=12, value=9, key="font_size_global")
-        truncate_labels_global = st.checkbox("Tronquer les étiquettes", value=True, key="truncate_labels_global")
-        st.markdown("### Graphique focus besoin")
-        font_size_specific = st.slider("Taille de la police des étiquettes", min_value=5, max_value=12, value=9, key="font_size_specific")
-        truncate_labels_specific = st.checkbox("Tronquer les étiquettes", value=True, key="truncate_labels_specific")
 
-    with st.expander("Tableau général"):
-        st.write(df)
+    st.markdown(f"# {df_info.iloc[1, 1]} - Les onze besoins")
 
-    
-    st.markdown("## Synthèse de l'ensemble des besoins")
-  
-    
-    add_to_radar(df, 'type_besoins', 'besoins', font_size_global, truncate_labels_global)
+    add_to_radar(df, 'type_besoins', 'besoins', truncate_labels_global, df_ref)
 
-    st.html("<br><br><hr>")
-    
     besoins_list = df['besoins'].unique()
     selected_besoin = st.selectbox("", besoins_list)
+
+    st.markdown(f"# {df_info.iloc[1, 1]} - {selected_besoin}")
 
     if selected_besoin:
         df_selected = df[df['besoins'] == selected_besoin]
@@ -194,9 +223,9 @@ if df is not None:
         norm = Normalize(vmin=0, vmax=1)
         cmap = plt.get_cmap('RdYlGn')
 
-        ordered_indicators = add_to_radar(df_selected, 'besoins', 'designation_indicateur', font_size_specific, truncate_labels_specific)
+        ordered_indicators = add_to_radar(df_selected, 'besoins', 'designation_indicateur', truncate_labels_specific, df_ref)
 
-        html_content = '<br><br><div class="ksln-grid">'
+        html_content = '<h3>Cliquez pour en savoir plus :</h3><div>'
         rotated_ordered_indicators = ordered_indicators[::-1][-1:] + ordered_indicators[::-1][:-1]
         for label, color in rotated_ordered_indicators:
             val = values_dict.get(label, 0)
@@ -204,7 +233,7 @@ if df is not None:
                 ft_color = "#FFF"
             else:
                 ft_color = "#000"
-                
+
             if val == 0:
                 bg_color = "#D3D3D3"
                 ft_color = "#000"
@@ -216,7 +245,7 @@ if df is not None:
             <a style="color: {ft_color}; text-decoration: none;" href="{href}" target="_blank">
                 <div class="ksln-cards" style="margin: 0px auto auto 3px;">
                     <p style="
-                        text-align: left;
+                        text-align: center;
                         padding: 10px;
                         background-color: {bg_color};
                         border-radius: 12px;
@@ -224,7 +253,7 @@ if df is not None:
                         font-weight: 500;
                         margin-bottom: 6px;
                     ">
-                        {label} ➜
+                        {label}
                     </p>
                 </div>
             </a>
