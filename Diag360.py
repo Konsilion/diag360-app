@@ -26,10 +26,6 @@ def format_label(label, truncate=False, max_len=50, line_len=25):
 
 
 
-
-
-
-
 def add_to_radar(df, groupe, s_groupe, truncate_labels=True, df_ref=None):
     # Filtrer les lignes où "valeur_indice" est None
     df_filtered = df.dropna(subset=["valeur_indice"])
