@@ -31,12 +31,14 @@ def format_label(label, truncate=False, max_len=50, line_len=25):
 
 
 def add_to_radar(df, groupe, s_groupe, truncate_labels=True, df_ref=None):
+    # Filtrer les lignes où "valeur_indice" est None
+    df_filtered = df.dropna(subset=["valeur_indice"])
 
     # Calculer la taille de la police en fonction du nombre d'indicateurs
-    num_indicators = len(df[s_groupe].unique())
+    num_indicators = len(df_filtered[s_groupe].unique())
     font_size = 18 + (num_indicators) * (-2/3)  # Linéaire entre 10 et 18 indicateurs
 
-    df_grouped = df.groupby([groupe, s_groupe])["valeur_indice"].mean().reset_index()
+    df_grouped = df_filtered.groupby([groupe, s_groupe])["valeur_indice"].mean().reset_index()
 
     labels = df_grouped[s_groupe].values
     values = df_grouped["valeur_indice"].values
@@ -74,20 +76,17 @@ def add_to_radar(df, groupe, s_groupe, truncate_labels=True, df_ref=None):
     ax.set_axisbelow(False)
 
     formatted_labels = [format_label(label, truncate_labels) for label in labels]
-    
+
     if df_ref is not None:
-        # Aligner les indicateurs du fichier de référence avec ceux du fichier principal
         df_ref_grouped = df_ref.groupby([groupe, s_groupe])["valeur_indice"].mean().reset_index()
         ref_values = []
-        for label in labels:  # Utiliser les labels d'origine pour la correspondance
+        for label in labels:
             if label in df_ref_grouped[s_groupe].values:
                 ref_values.append(df_ref_grouped.loc[df_ref_grouped[s_groupe] == label, "valeur_indice"].values[0])
             else:
-                ref_values.append(0)  # Valeur par défaut si l'indicateur est manquant
+                ref_values.append(0)
         ax.bar(angles, ref_values, color='none', alpha=1, width=2*np.pi/num_vars, zorder=2.5, linewidth=1, edgecolor='lightcoral', linestyle='dashed')
 
-    
-    # Tracer les barres principales après les barres de référence
     ax.bar(angles, values, color=colors, alpha=1, width=2*np.pi/num_vars, zorder=2, linewidth=3, edgecolor='white')
     ax.tick_params(axis='y', labelcolor='white', labelsize=0, grid_color='#FFF', grid_alpha=0, width=0)
     ax.set_ylim(0, 1.05)
@@ -96,25 +95,31 @@ def add_to_radar(df, groupe, s_groupe, truncate_labels=True, df_ref=None):
     ax.set_xticklabels(formatted_labels, fontsize=font_size)
     ax.tick_params(axis='x', labelsize=font_size, labelcolor='#222', grid_color='#555', zorder=0, grid_alpha=0.1, pad=5)
 
-    if(groupe == "type_besoins"):
+    if groupe == "type_besoins":
         df_affiche = df_grouped.iloc[:, [0, 1, 2]].set_axis(['Type de besoin', 'Besoin', 'Indice'], axis=1)
         df_affiche = df_affiche.iloc[[0] + [i for i in range(-1, -len(df_affiche), -2)] + [i for i in range(-2, -len(df_affiche), -2)]]
-        df_affiche = df_affiche.set_index("Type de besoin")  # <-- assignation ici
+        df_affiche = df_affiche.set_index("Type de besoin")
     else:
         df_affiche = df_grouped.iloc[:, [1, 2]].set_axis(['Besoin', 'Indice'], axis=1)
         df_affiche = df_affiche.iloc[[0] + [i for i in range(-1, -len(df_affiche), -2)] + [i for i in range(-2, -len(df_affiche), -2)]]
-        df_affiche = df_affiche.set_index("Besoin")  # <-- assignation ici
+        df_affiche = df_affiche.set_index("Besoin")
 
     if df_ref is not None:
         st.html(f"référence : {df_ref_info.iloc[1, 1]}<br>")
 
-    st.pyplot(fig)
-
     st.write(df_affiche.round(2))
+    st.pyplot(fig)
 
     return list(zip(df_grouped[s_groupe], colors))
 
 
+
+
+# Fonction pour appliquer les conditions
+def update_valeur_indice(row):
+    if pd.isna(row["valeur"]) and row["valeur_indice"] == 0:
+        return np.nan
+    return row["valeur_indice"]
 
 
 
@@ -193,16 +198,17 @@ with st.expander("Paramètres"):
         except Exception as e:
             st.error(f"Erreur lors du chargement du fichier : {e}")
 
-
 # 👉 Affichage seulement si le fichier a bien été chargé
 if df is not None:
 
+    # Appliquer la fonction update_valeur_indice
+    df["valeur_indice"] = df.apply(update_valeur_indice, axis=1)
+    # st.write(df)   
+
     st.markdown(f"# {df_info.iloc[1, 1]} - Les onze besoins")
 
-    
     # truncate_labels_global = st.checkbox("Tronquer les étiquettes", value=True, key="truncate_labels_global")
     add_to_radar(df, 'type_besoins', 'besoins', True, df_ref)
-
 
     besoins_list = df['besoins'].unique()
     selected_besoin = st.selectbox("", besoins_list)
@@ -212,16 +218,15 @@ if df is not None:
     if selected_besoin:
         df_selected = df[df['besoins'] == selected_besoin]
         values_dict = dict(zip(df_selected["designation_indicateur"], df_selected["valeur_indice"]))
-
+    
         norm = Normalize(vmin=0, vmax=1)
         cmap = plt.get_cmap('RdYlGn')
-
-
+    
         truncate_labels_specific = st.checkbox("Tronquer les étiquettes", value=True, key="truncate_labels_specific")
         ordered_indicators = add_to_radar(df_selected, 'besoins', 'designation_indicateur', truncate_labels_specific, df_ref)
 
-
-        
+               
+        # HTML content for non-None values
         html_content = '<h3>Cliquez pour en savoir plus :</h3><div>'
         rotated_ordered_indicators = ordered_indicators[::-1][-1:] + ordered_indicators[::-1][:-1]
         for label, color in rotated_ordered_indicators:
@@ -230,12 +235,9 @@ if df is not None:
                 ft_color = "#FFF"
             else:
                 ft_color = "#000"
-
-            if val == 0:
-                bg_color = "#D3D3D3"
-                ft_color = "#000"
-            else:
-                bg_color = to_hex(cmap(norm(val)))
+    
+            bg_color = to_hex(cmap(norm(val)))
+    
             lien = df_indicateurs.loc[df_indicateurs["designation_indicateur"] == label, "lien"].values
             href = lien[0] if len(lien) > 0 else "#"
             html_content += f"""
@@ -257,5 +259,32 @@ if df is not None:
             """
         html_content += '</div>'
         st.html(html_content)
+    
+        # HTML content for None values
+        none_values_df = df_selected[df_selected["valeur_indice"].isna()]
+        html_content_none = '<h4>Indicateurs sans valeur :</h4><div>'
+        for _, row in none_values_df.iterrows():
+            label = row["designation_indicateur"]
+            lien = df_indicateurs.loc[df_indicateurs["designation_indicateur"] == label, "lien"].values
+            href = lien[0] if len(lien) > 0 else "#"
+            html_content_none += f"""
+            <a style="color: #000; text-decoration: none;" href="{href}" target="_blank">
+                <div class="ksln-cards" style="margin: 0px auto auto 3px;">
+                    <p style="
+                        text-align: center;
+                        padding: 10px;
+                        background-color: #D3D3D3;
+                        border-radius: 12px;
+                        transition: 0.3s ease;
+                        font-weight: 500;
+                        margin-bottom: 6px;
+                    ">
+                        {label}
+                    </p>
+                </div>
+            </a>
+            """
+        html_content_none += '</div>'
+        st.html(html_content_none)
 else:
     st.warning("Aucun fichier n’a été chargé. Veuillez en charger un pour commencer.")
