@@ -179,8 +179,8 @@ with st.expander("Paramètres"):
         selected_file_name = st.selectbox("Sélectionnez l'EPCI à étudier : ", file_names)
         selected_file = next(file for file in uploaded_files if pd.read_excel(file, sheet_name="Informations").iloc[1, 1] == selected_file_name)
 
-        reference_file_name = st.selectbox("Sélectionnez un EPCI de référence :", [None] + file_names)
-        reference_file = next((file for file in uploaded_files if pd.read_excel(file, sheet_name="Informations").iloc[1, 1] == reference_file_name), None)
+        # reference_file_name = st.selectbox("Sélectionnez un EPCI de référence :", [None] + file_names)
+        # reference_file = next((file for file in uploaded_files if pd.read_excel(file, sheet_name="Informations").iloc[1, 1] == reference_file_name), None)
 
         try:
             df = pd.read_excel(selected_file, sheet_name='Export')
@@ -193,6 +193,10 @@ with st.expander("Paramètres"):
                 df_ref_info = pd.read_excel(reference_file, sheet_name='Informations')
         except Exception as e:
             st.error(f"Erreur lors du chargement du fichier : {e}")
+
+
+
+
 
 # 👉 Affichage seulement si le fichier a bien été chargé
 if df is not None:
