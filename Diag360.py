@@ -188,9 +188,9 @@ with st.expander("Paramètres"):
             df_indicateurs = pd.read_excel(selected_file, sheet_name="Indicateurs_Infos")
             df_info = pd.read_excel(selected_file, sheet_name="Informations")
 
-            if reference_file:
-                df_ref = pd.read_excel(reference_file, sheet_name='Export')
-                df_ref_info = pd.read_excel(reference_file, sheet_name='Informations')
+            # if reference_file:
+            #    df_ref = pd.read_excel(reference_file, sheet_name='Export')
+            #    df_ref_info = pd.read_excel(reference_file, sheet_name='Informations')
         except Exception as e:
             st.error(f"Erreur lors du chargement du fichier : {e}")
 
